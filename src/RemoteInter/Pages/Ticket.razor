@@ -1,0 +1,172 @@
+﻿@page "/ticket"
+
+<PageTitle>WTicket System</PageTitle>
+
+@using RemoteInter.Data
+@using RemoteInter.Enum
+@using RemoteInter.Model.Dao
+@using RemoteInter.Service
+@inject IUserService _userService
+@inject ITicketService _ticketService
+
+<h1>Ticket System</h1>
+
+<p>This system allows QA to report a bug and RD can mark a bug as resolved.</p>
+
+<div>
+    <button class="btn btn-primary" @onclick="LoginQa">Login as QA</button>
+    <button class="btn btn-success" @onclick="LoginRd">Login as RD</button>
+    <button class="btn btn-secondary" @onclick="LoginPm">Login as PM</button>
+    <button class="btn btn-danger" @onclick="Logout">Logout</button>
+</div>
+<br/>
+
+
+@if (_userService.Get() == null)
+{
+    <p><em>You must login first ...</em></p>
+}
+else
+{
+    <p role="status">You are @currentUserRole</p>
+    <div>
+    @if (_userService.IsQa())
+    {
+        <button class="btn btn-warning" @onclick="CreateBug">Create Bug</button>
+        <button class="btn btn-secondary" @onclick="CreateTestCase">Create Test Case </button>
+    }
+    @if (_userService.IsPm())
+    {
+        <button class="btn btn-info" @onclick="CreateFeature">Create Feature</button>
+    }
+    </div>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Ticket Type</th>
+                <th>Ticket Status</th>
+                <th>Summary</th>
+                <th>Description</th>
+                <th>Severity </th>
+                <th>Priority </th>
+                <th>Operation</th>
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var ticket in currentTickets)
+            {
+                <tr>
+                    <td>@(Enum.GetName(typeof(TicketType), ticket.Type))</td>
+                    <td>@(Enum.GetName(typeof(TicketStatus), ticket.Status))</td>
+                    <td>@ticket.Summary</td>
+                    <td>@ticket.Description</td>
+                    <td>@ticket.Severity</td>
+                    <td>@ticket.Priority</td>
+                    <td>
+                        @if ((ticket.Type==TicketType.Bug||ticket.Type==TicketType.Feature) && ticket.Status==TicketStatus.Open && _userService.IsRd())
+                        {
+                            var id = @ticket.Id.ToString();
+                            <button class="btn btn-info" @onclick="(e => Resolve(id))">Resolve</button>
+                        }
+                         @if (ticket.Type==TicketType.TestCase && ticket.Status==TicketStatus.Open && _userService.IsQa())
+                        {
+                            var id = @ticket.Id.ToString();
+                            <button class="btn btn-info" @onclick="(e => Resolve(id))">Resolve</button>
+                        }
+                         @if ((ticket.Type==TicketType.Bug || ticket.Type==TicketType.TestCase) && _userService.IsQa())
+                        {
+                            var id = @ticket.Id.ToString();
+                            <button class="btn btn-danger" @onclick="(e => Delete(id))">Delete</button>
+                        }
+                         @if (ticket.Type==TicketType.Feature  && _userService.IsPm())
+                        {
+                            var id = @ticket.Id.ToString();
+                            <button class="btn btn-danger" @onclick="(e => Delete(id))">Delete</button>
+                        }
+                     </td>
+                </tr>
+            }
+        </tbody>
+    </table>
+}
+
+<CreateTicketModal @ref="CreateModal" RefreshListCallback="RefreshListCallback"></CreateTicketModal>
+
+@code {
+    private string currentUserRole = "";
+    private CreateTicketModal CreateModal { get; set; }
+
+    private async Task LoginQa()
+    {
+        _userService.Login(RemoteInter.Enum.UserType.QA);
+        GetUserRole();
+        await GetTickets();
+    }
+    private async Task LoginRd()
+    {
+        _userService.Login(RemoteInter.Enum.UserType.RD);
+        GetUserRole();
+        await GetTickets();
+    }
+    private async Task LoginPm()
+    {
+        _userService.Login(RemoteInter.Enum.UserType.PM);
+        GetUserRole();
+        await GetTickets();
+    }
+    private void Logout()
+    {
+        _userService.Logout();
+    }
+
+    private void GetUserRole()
+    {
+        var user = _userService.Get();
+        currentUserRole = user == null ? "" : Enum.GetName(typeof(UserType), user.Type);
+    }
+
+    private List<TicketDao> currentTickets =new List<TicketDao>();
+
+    private async Task GetTickets()
+    {
+        currentTickets = (await _ticketService.List()).ToList();
+    }
+    private void CreateBug()
+    {
+        CreateModal.DataModel.Type = TicketType.Bug;
+        CreateModal.DataModel.Summary = "";
+        CreateModal.DataModel.Description = "";
+        CreateModal.Open();
+    }
+    private void CreateTestCase()
+    {
+        CreateModal.DataModel.Type = TicketType.TestCase;
+        CreateModal.DataModel.Summary = "";
+        CreateModal.DataModel.Description = "";
+        CreateModal.Open();
+    }
+    private void CreateFeature()
+    {
+        CreateModal.DataModel.Type = TicketType.Feature;
+        CreateModal.DataModel.Summary = "";
+        CreateModal.DataModel.Description = "";
+        CreateModal.Open();
+    }
+    private async Task Resolve(string id)
+    {
+        await _ticketService.Resolve(id);
+        await GetTickets();
+    }
+
+    private async Task Delete(string id)
+    {
+        await _ticketService.Delete(id);
+        await GetTickets();
+    }
+
+    public async Task RefreshListCallback()
+    {
+        await GetTickets();
+    }
+
+}

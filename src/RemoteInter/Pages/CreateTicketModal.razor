@@ -1,0 +1,82 @@
+﻿@using RemoteInter.Enum
+@using RemoteInter.Model.Dao
+@using RemoteInter.Service
+@inject ITicketService _ticketService
+
+<div class="modal @ModalClass" tabindex="-1" role="dialog" style="display:@ModalDisplay">
+    <div class="modal-dialog" role="document">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Modal title</h5>
+                <button type="button" class="close" data-dismiss="modal" aria-label="Close" @onclick="() => Close()">
+                    <span aria-hidden="true">&times;</span>
+                </button>
+            </div>
+
+             <EditForm Model="@DataModel" OnValidSubmit="@HandleValidSubmit">
+                <DataAnnotationsValidator />
+                <ValidationSummary />
+                <div class="modal-body">
+                    <InputText placeholder="Summary" @bind-Value="DataModel.Summary"/>
+                    <InputText placeholder="Description" @bind-Value="DataModel.Description"/>
+                    <br/><br/>
+                    <InputNumber placeholder="Severity " @bind-Value="DataModel.Severity"/>
+                    <InputNumber placeholder="Priority" @bind-Value="DataModel.Priority"/>
+                </div>
+                 <div class="modal-footer">
+                    <button type="submit" class="btn btn-primary" >Save changes</button>
+                    <button type="button" class="btn btn-secondary" data-dismiss="modal" @onclick="() => Close()">Close</button>
+                </div>
+            </EditForm>
+
+        </div>
+    </div>
+</div>
+
+
+@if (ShowBackdrop)
+{
+    <div class="modal-backdrop fade show"></div>
+}
+
+
+@code {
+    public TicketDao DataModel = new();
+    public Guid Guid = Guid.NewGuid();
+    public string ModalDisplay = "none;";
+    public string ModalClass = "";
+    public bool ShowBackdrop = false;
+    public void Open()
+    {
+        ModalDisplay = "block;";
+        ModalClass = "Show";
+        ShowBackdrop = true;
+        StateHasChanged();
+    }
+
+    public void Close()
+    {
+        ModalDisplay = "none";
+        ModalClass = "";
+        ShowBackdrop = false;
+        StateHasChanged();
+    }
+
+
+    private async Task HandleValidSubmit()
+    {
+        await _ticketService.Create(new TicketDao
+            {
+                Summary = DataModel.Summary,
+                Description=DataModel.Description,
+                Severity =DataModel.Severity,
+                Priority =DataModel.Priority,
+                Type = DataModel.Type,
+                Status = TicketStatus.Open
+            });
+
+        await RefreshListCallback.InvokeAsync();
+    }
+    [Parameter]
+    public EventCallback RefreshListCallback { get; set; }
+}
