@@ -1,0 +1,18 @@
+Task 3
+
+A 開發, 使用的框架或技術 :
+	1. .Net core 6
+	2. c#
+	3. MongoDb
+	4. Redis
+
+B 佈署
+	1. 使用 docker 布署多個服務互為備援，依選用的前端技術不同，選擇 loading balance 方案
+	2. 使用 GitLab CI 結合緞本控制系統
+	3. 在多個服務實體上使用 redis 共用快取，避免資料衝突
+
+C Data model 
+	參照 Task 2 的實作
+
+D UI mock up
+	參照 Task 2 的實作

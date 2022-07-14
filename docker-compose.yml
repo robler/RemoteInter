@@ -1,0 +1,53 @@
+version: '3.4'
+
+services:
+## Databases
+  mongo:
+    container_name: mongo
+    image: "mongo:5.0"
+    ports:
+      - 27017-27019:27017-27019
+    volumes:
+      - ./data/mongo_ticket.json:/var/mongo_ticket.json
+      - ./data/mongo-init.js:/docker-entrypoint-initdb.d/mongo-init.js:ro
+      - ./.docker-volumes/mongo-data:/data/db
+    healthcheck:
+      test: echo 'db.runCommand("ping").ok' | mongo mongo:27017/test --quiet
+      interval: 10s
+      timeout: 10s
+      retries: 5
+      start_period: 15s
+    networks:
+      - backend
+
+## Redis Cache
+  redis:
+    container_name: redis
+    image: "redis:alpine"
+    ports:
+      - 6379:6379
+    volumes:
+      - ./redis/redis.conf:/usr/local/etc/redis/redis.conf
+      - ./.docker-volumes/redis-data:/data
+    networks:
+      - backend
+
+## Main App
+  main:
+    image: ${DOCKER_REGISTRY-}main
+    build:
+      context: .
+      dockerfile: src/RemoteInter/Dockerfile
+    environment:
+      - ASPNETCORE_ENVIRONMENT=Development
+    networks:
+      - backend
+
+  
+
+volumes: 
+  database-data:
+
+networks:
+  backend:
+
